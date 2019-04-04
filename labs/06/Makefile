@@ -5,5 +5,6 @@ all:
 clean:
 	rm -rf lex.yy.c
 	rm -rf lexic_analyzer
+	rm -rf syntax_calc
 	rm -rf *.ac
 	rm -rf *.out

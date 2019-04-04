@@ -7,9 +7,24 @@
 #define DIV "div"
 #define PRINT "print"
 #define ASSIGN "assign"
+#define S_COUNTER 0
+#define Sl_COUNTER 1
+#define A_COUNTER 2
+#define Al_COUNTER 3
+#define B_COUNTER 4
+#define Bl_COUNTER 5
+#define C_COUNTER 6
+#define Cl_COUNTER 7
+#define D_COUNTER 8
+#define id_COUNTER 9
+#define inum_COUNTER 10
+#define fnum_COUNTER 11
 
 char *source;
 int cursor;
+char stack[50][50];
+int stackPos;
+int counters[12];
 
 char getNextToken();
 int match(char c);
@@ -45,15 +60,12 @@ int main(int argc, char *argv[])
     FILE *fp;
     char buf[bufSize], *tempLine;
     int res, line;
-    //char ch;
     fp = fopen(argv[1], "r");
     if (fp == NULL)
     {
         perror("Error while opening the file.\n");
     }
 
-    /*while ((ch = fgetc(fp)) != EOF)
-        printf("%c", ch);*/
     line = 1;
     while (fgets(buf, sizeof(buf), fp) != NULL)
     {
@@ -89,8 +101,8 @@ int Id()
 }
 int Print()
 {
-    return match('p') && match('r') && match('i') && match('n') && 
-    match('t');
+    return match('p') && match('r') && match('i') && match('n') &&
+           match('t');
 }
 int Plus()
 {
@@ -118,109 +130,221 @@ int FNum()
 }
 int IntDcl()
 {
-    return match('i') && match('n') && match('t') && 
-    match('d') && match('c') && match('l');
+    return match('i') && match('n') && match('t') &&
+           match('d') && match('c') && match('l');
 }
 int FloatDcl()
 {
-    return match('f') && match('l') && match('o') && 
-    match('a') && match('t') && match('d') && match('c') && 
-    match('l');
+    return match('f') && match('l') && match('o') &&
+           match('a') && match('t') && match('d') && match('c') &&
+           match('l');
 }
 int Assign()
 {
-    return match('a') && match('s') && match('s') && 
-    match('i') && match('g') && match('n');
+    return match('a') && match('s') && match('s') &&
+           match('i') && match('g') && match('n');
 }
 int FIntDcl()
 {
-    return IntDcl() && Id();
+    int temp = IntDcl() && Id();
+    if (temp)
+        printf("\tstart -> {intdcl, id}\n");
+    return temp;
 }
 int FFloatDcl()
 {
-    return FloatDcl() && Id();
+    int temp = FloatDcl() && Id();
+    if (temp)
+        printf("\tstart -> {floatdcl, id}\n");
+    return temp;
 }
 int FPrint()
 {
-    return Print() && Id();
+    int temp = Print() && Id();
+    if (temp)
+        printf("\tstart -> {print, id}\n");
+    return temp;
 }
 int FAssign()
 {
-    return Id() && Assign() && S();
+    int temp = Id() && Assign() && S();
+    if (temp)
+        printf("\tstart -> {id, assign, S_0}\n");
+    return temp;
 }
 int S()
 {
-    int res = A() && Sl();
-    if(res) printf("S");
-    return res;
+    char t[60];
+    sprintf(t, "S_%d -> {A_%d, Sl_%d}", counters[S_COUNTER]++, counters[A_COUNTER], counters[Sl_COUNTER]);
+
+    int temp = A() && Sl();
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp;
 }
 int Sl()
 {
+    char t[60];
+    sprintf(t, "Sl_%d -> {plus, A_%d, Sl_%d}", counters[Sl_COUNTER], counters[A_COUNTER], counters[Sl_COUNTER] + 1);
+    counters[Sl_COUNTER]++;
+
     int savedCursor = cursor;
-    int res = (cursor = savedCursor, Plus() && A() && Sl());
-    if(res) printf("Sl");
-    return res || (cursor = savedCursor, 1);
+    int temp = (cursor = savedCursor, Plus() && A() && Sl());
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    else
+    {
+        sprintf(t, "Sl_%d -> {plus, A_%d, Sl_%d}", counters[Sl_COUNTER], counters[A_COUNTER], counters[Sl_COUNTER] + 1);
+    }
+
+    return temp || (cursor = savedCursor, 1);
 }
 int A()
 {
-    int res = B() && Al();
-    if(res) printf("A");
-    return res;
+    char t[60];
+    sprintf(t, "A_%d -> {B_%d, Al_%d}", counters[A_COUNTER]++, counters[B_COUNTER], counters[Al_COUNTER]);
+
+    int temp = B() && Al();
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp;
 }
 int Al()
 {
+    char t[60];
+    sprintf(t, "Al_%d -> {minus, B_%d, Al_%d}", counters[Al_COUNTER], counters[B_COUNTER], counters[Al_COUNTER] + 1);
+    counters[Al_COUNTER]++;
+
     int savedCursor = cursor;
-    int res = (cursor = savedCursor, Minus() && B() && Al());
-    if(res) printf("Al");
-    return res || (cursor = savedCursor, 1);
+    int temp = (cursor = savedCursor, Minus() && B() && Al());
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp || (cursor = savedCursor, 1);
 }
 int B()
 {
-    int res = C() && Bl();
-    if(res) printf("B");
-    return res;
+    char t[60];
+    sprintf(t, "B_%d -> {C_%d, Bl_%d}", counters[B_COUNTER]++, counters[C_COUNTER], counters[Bl_COUNTER]);
+
+    int temp = C() && Bl();
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp;
 }
 int Bl()
 {
+    char t[60];
+    sprintf(t, "Bl_%d -> {mult, C_%d, Bl_%d}", counters[Bl_COUNTER], counters[C_COUNTER], counters[Bl_COUNTER] + 1);
+    counters[Bl_COUNTER]++;
+
     int savedCursor = cursor;
-    int res = (cursor = savedCursor, Mult() && C() && Bl());
-    if(res) printf("Bl");
-    return res || (cursor = savedCursor, 1);
+    int temp = (cursor = savedCursor, Mult() && C() && Bl());
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp || (cursor = savedCursor, 1);
 }
 int C()
 {
-    int res = D() && Cl();
-    if(res) printf("C");
-    return res;
+    char t[60];
+    sprintf(t, "C_%d -> {D_%d, Cl_%d}", counters[C_COUNTER]++, counters[D_COUNTER], counters[Cl_COUNTER]);
+
+    int temp = D() && Cl();
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp;
 }
 int Cl()
 {
+    char t[60];
+    sprintf(t, "Cl_%d -> {div, D_%d, Cl_%d}", counters[Cl_COUNTER], counters[D_COUNTER], counters[Cl_COUNTER] + 1);
+    counters[Cl_COUNTER]++;
+
     int savedCursor = cursor;
-    int res = (cursor = savedCursor, Div() && D() && Cl());
-    if(res) printf("Cl");
-    return res || (cursor = savedCursor, 1);
+    int temp = (cursor = savedCursor, Div() && D() && Cl());
+    if (temp)
+    {
+        strcpy(stack[stackPos], t);
+        stackPos++;
+    }
+    return temp || (cursor = savedCursor, 1);
 }
 int D()
 {
     int savedCursor = cursor;
-    int res = (cursor = savedCursor, Id()) ||
-    (cursor = savedCursor, INum()) ||
-    (cursor = savedCursor, FNum());
-    if(res) printf("D");
-    return res;
+    int selected = 0;
+    int temp = (cursor = savedCursor, selected = 0, Id()) ||
+               (cursor = savedCursor, selected = 1, INum()) ||
+               (cursor = savedCursor, selected = 2, FNum());
+    if (temp)
+    {
+        switch (selected)
+        {
+        case 0:
+            sprintf(stack[stackPos], "D_%d -> id_%d", counters[D_COUNTER]++, counters[id_COUNTER]++);
+            break;
+        case 1:
+            sprintf(stack[stackPos], "D_%d -> inum_%d", counters[D_COUNTER]++, counters[inum_COUNTER]++);
+            break;
+        case 2:
+            sprintf(stack[stackPos], "D_%d -> fnum_%d", counters[D_COUNTER]++, counters[fnum_COUNTER]++);
+            break;
+        default:
+            printf("ERROR");
+            break;
+        }
+        stackPos++;
+    }
+    return temp;
 }
 int Analyzer()
 {
     int savedCursor = cursor;
     return (cursor = savedCursor, FIntDcl()) ||
-    (cursor = savedCursor, FFloatDcl()) ||
-    (cursor = savedCursor, FPrint()) ||
-    (cursor = savedCursor, FAssign());
+           (cursor = savedCursor, FFloatDcl()) ||
+           (cursor = savedCursor, FPrint()) ||
+           (cursor = savedCursor, FAssign());
 }
 int Parse(char *s)
 {
     source = s;
     cursor = 0;
-
-    return Analyzer() && cursor == strlen(source);
+    stackPos = 0;
+    int i;
+    for (i = 0; i < 12; i++)
+    {
+        counters[i] = 0;
+    }
+    printf("(%s):\n", s);
+    printf("digraph D {\n");
+    int temp = Analyzer() && cursor == strlen(source);
+    if (temp && stackPos > 0)
+    {
+        for (i = stackPos - 1; i >= 0; i--)
+        {
+            printf("\t%s\n", stack[i]);
+        }
+    }
+    printf("}\n");
+    return temp;
 }
